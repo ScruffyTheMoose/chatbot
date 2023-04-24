@@ -26,6 +26,12 @@ async def on_message(message):
 
         # remove '~!' from start of message
         user_message = message.content[2:]
+
+        # allows any user to clear the chat history
+        if user_message == "RESET":
+            chatbot.reset_hist()
+            return
+
         print(user_message)
 
         # generate response from chatbot
@@ -37,15 +43,9 @@ async def on_message(message):
 
         print("Response sent.")
 
-    else:
-        print("Something went wrong...")
 
+# I pushed an old key alright don't judge me
+key = open("key.pw", "r").read()
 
 if __name__ == "__main__":
-    client.run(
-        "MTA5MjI5OTkyMjQ5MTA0ODAyOA.Gpu4e8.Wq8EJrPtAgwQXiXGehx7-UxgTg91OoD3c4iVko"
-    )
-
-
-# bot token:
-# MTA5MjI5OTkyMjQ5MTA0ODAyOA.Gpu4e8.Wq8EJrPtAgwQXiXGehx7-UxgTg91OoD3c4iVko
+    client.run(key)
