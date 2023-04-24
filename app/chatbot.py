@@ -35,8 +35,34 @@ class Chatbot:
 
         return self.conv.generated_responses[-1]
 
-    def reset_hist(self):
+    def get_response_hist(self) -> list:
+        """Getter for response history
+
+        Returns:
+            list: Generated responses in string
+        """
+
+        return self.conv.generated_responses
+
+    def get_input_hist(self) -> list:
+        """Getter for input history
+
+        Returns:
+            list: Input strings from users
+        """
+
+        return self.conv.past_user_inputs
+
+    def rm_outdated_hist(self) -> None:
+        """Removes the oldest inputs and responses for model focus and efficiency"""
+
+        self.conv.past_user_inputs.pop(0)
+        self.conv.generated_responses.pop(0)
+
+        print("Oldest input and response removed")
+
+    def reset_hist(self) -> None:
         """Resets the conversation history when called"""
 
         self.conv = Conversation()
-        print("Reset of history successful")
+        print("Conversation history reset")
