@@ -81,7 +81,7 @@ class Chatbot:
         history = ""
 
         # appending formatted dialogue into history
-        for q, r in questions, responses:
+        for q, r in zip(questions, responses):
             # append formatted question
             history += f"User: {q}\n"
             # append formatted response
@@ -136,7 +136,11 @@ class Chatbot:
             top_p=0.90,
             top_k=40,
             num_return_sequences=1,
-            stopping_criteria=MyStoppingCriteria("User:", self.complete_input),
+            stopping_criteria=GenStoppingCriteria(
+                target_sequence="User:",
+                complete_input=self.complete_input,
+                tokenizer=self.tokenizer,
+            ),
             attention_mask=attention_mask,
             pad_token_id=pad_token_id,
         )
@@ -205,12 +209,11 @@ class Preprocess:
         # Escape any special characters in the input
         sanitized_input = special_chars.sub(r"\\\1", input_string)
 
-        # Return the sanitized input
         return sanitized_input
 
 
 # class for managing model generation stopping criteria - will stop once the model returns control back to the user via "User:" keyword
-class MyStoppingCriteria(StoppingCriteria):
+class GenStoppingCriteria(StoppingCriteria):
     def __init__(self, target_sequence, complete_input, tokenizer):
         self.target_sequence = target_sequence
         self.complete_input = complete_input
