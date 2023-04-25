@@ -1,9 +1,8 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM, StoppingCriteria
 import torch, re
 
+# persona to be given to model
 persona = "About ChatGPT: ChatGPT is the ideal AI solution for those in need of quick, accurate and informative responses. Its vast training data enables it to handle a wide range of questions, from general knowledge to technical subjects, and its advanced language generation capabilities make it capable of generating engaging and high-quality text. With its neutral tone and ability to handle large amounts of data, ChatGPT is perfect for businesses, researchers, and individuals looking to automate tasks or enhance their workflows. Experience the power of AI with ChatGPT today!\n\nPersonality summary: ChatGPT is an AI language model created by OpenAI, designed to answer questions and generate text based on its training data. It is knowledgeable, neutral and straightforward."
-history = 'User: What\'s the capital of France?\nChatGPT: The capital of France is Paris.\nUser: Can you tell me a joke?\nChatGPT: Sure! Why did the tomato turn red? Because it saw the salad dressing!\nUser: What is the meaning of life?\nChatGPT: The meaning of life is a philosophical question that has been debated for centuries. Some people believe that it is to find happiness and fulfillment, while others believe it is to achieve a certain purpose or goal. Ultimately, the meaning of life is subjective and can be different for each individual.\nUser: What is machine learning?\nChatGPT: Machine learning is a field of computer science that uses statistical techniques to give computer systems the ability to "learn" (i.e. progressively improve performance on a specific task) with data, without being explicitly programmed.\nUser: Can you write a short story for me?\nChatGPT: Of course! Once upon a time, there was a kind and adventurous cat named Whiskers. Whiskers loved to explore the world around them, from the tallest trees to the deepest caves. One day, while on a journey, they met a group of animals in need. Whiskers used their bravery and cunning to help the animals and became known as the hero of the forest. From that day forward, Whiskers continued to have many exciting adventures and help those in need. The end.\n'
-prompt = f"ChatGPT's Persona: {persona}\n<START>\n[DIALOGUE HISTORY]\n{history}\nUser: Tell me about the history of the roman empire please.\nChatGPT:"
 
 # user prompts to be preceded with 'User:'
 questions = [
@@ -44,14 +43,62 @@ class Chatbot:
         self.model.to(device)
         self.device = device
 
-    def encode(self, user_input: str) -> list[int]:
+        # tracking raw version of last input for both StoppingCriteria and cleaning the response from the model
+        self.complete_input = ""
+
+    def gen_history(self) -> str:
+        """Generates a complete dialogue history to provide the model with context.
+
+        Returns:
+            str: _description_
+        """
+
+        history = ""
+
+        for q, r in questions, responses:
+            # append formatted question
+            history += f"User: {q}\n"
+            # append formatted response
+            history += f"ChatGPT: {q}\n"
+
+        return history
+
+    def gen_input(self, user_input: str) -> str:
+
+        history = self.gen_history()
+
+        complete_input = f"ChatGPT's Persona: {persona}\n<START>\n[DIALOGUE HISTORY]\n{history}\nUser: {user_input}\nChatGPT:"
+
+        self.complete_input = complete_input
+
+        return complete_input
+
+    def encode(self, complete_input: str) -> torch.Tensor:
+        """Uses the selected tokenizer to encode the user input text.
+
+        Args:
+            complete_input (str): Combined persona, chat history, and user prompt to be processed by the model.
+
+        Returns:
+            torch.Tensor: A Tensor object containing the encoded version of the input text.
+        """
+
         # Tokenize the input text
-        input_ids = self.tokenizer.encode(prompt, return_tensors="pt")
+        input_ids = self.tokenizer.encode(complete_input, return_tensors="pt")
         input_ids = input_ids.to(self.device)
 
         return input_ids
 
     def generate(self, input_ids: torch.Tensor) -> torch.Tensor:
+        """Uses the selected model to process the encoded input.
+
+        Args:
+            input_ids (torch.Tensor): Encoded user input text.
+
+        Returns:
+            torch.Tensor: Encoded model output text.
+        """
+
         # create attention mask
         attention_mask = torch.ones(
             input_ids.shape, dtype=torch.long, device=input_ids.device
@@ -61,7 +108,7 @@ class Chatbot:
         pad_token_id = self.tokenizer.eos_token_id
 
         # generate encoded output with the model
-        output = self.model.generate(
+        output_ids = self.model.generate(
             input_ids=input_ids,
             max_length=1000,
             do_sample=True,
@@ -69,19 +116,28 @@ class Chatbot:
             top_p=0.90,
             top_k=40,
             num_return_sequences=1,
-            stopping_criteria=MyStoppingCriteria("User:", prompt),
+            stopping_criteria=MyStoppingCriteria("User:", self.complete_input),
             attention_mask=attention_mask,
             pad_token_id=pad_token_id,
         )
 
-        return output
+        return output_ids
 
     def decode(self, output_ids: torch.Tensor) -> str:
-        # Decode the generated output
-        generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        """Uses the selected tokenizer to decode the model output.
 
-        # returns the completed generated text - excludes "User:" stopping keyword
-        return generated_text[:-5]
+        Args:
+            output_ids (torch.Tensor): Encoded model output text.
+
+        Returns:
+            str: A multi-line string containing the model output text.
+        """
+
+        # Decode the generated output
+        generated_text = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
+
+        # returns the completed generated text - excludes "User:" stopping keyword and the initial complete input text
+        return generated_text[:-5].replace(self.complete_input, "")
 
     def sanitize_input(input_string: str) -> str:
         """Preprocessing method to sanitize user inputs with regex. Will automatically escape the following characters:
@@ -127,17 +183,20 @@ class Chatbot:
         return sanitized_input
 
 
-# inner class for managing model generation stopping criteria - will stop once the model returns control back to the user via "User:" keyword
+# class for managing model generation stopping criteria - will stop once the model returns control back to the user via "User:" keyword
 class MyStoppingCriteria(StoppingCriteria):
-    def __init__(self, target_sequence, prompt, tokenizer):
+    def __init__(self, target_sequence, complete_input, tokenizer):
         self.target_sequence = target_sequence
-        self.prompt = prompt
+        self.complete_input = complete_input
         self.tokenizer = tokenizer
 
     def __call__(self, input_ids, scores, **kwargs):
         # Get the generated text as a string
         generated_text = self.tokenizer.decode(input_ids[0])
-        generated_text = generated_text.replace(self.prompt, "")
+
+        # excluding the initial complete input to prevent collisions with "User:" keyword
+        generated_text = generated_text.replace(self.complete_input, "")
+
         # Check if the target sequence appears in the generated text
         if self.target_sequence in generated_text:
             return True  # Stop generation
