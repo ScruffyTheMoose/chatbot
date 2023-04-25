@@ -59,11 +59,52 @@ class Chatbot:
         checkpoint: str = "PygmalionAI/pygmalion-350m",
         device: str = "cpu",
     ) -> None:
+        """Constructor
+
+        Args:
+            tokenizer (str, optional): Checkpoint name from pretrained huggingface models. Defaults to "PygmalionAI/pygmalion-350m".
+            checkpoint (str, optional): Checkpoint name from pretrained huggingface models. Defaults to "PygmalionAI/pygmalion-350m".
+            device (str, optional): Used to select device for compute - use "cuda" if enabled. Defaults to "cpu".
+        """
+
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer)
         self.model = AutoModelForCausalLM.from_pretrained(checkpoint)
         self.model.to(device)
 
-    def sanitize_input(input_string):
+    def sanitize_input(input_string: str) -> str:
+        """Preprocessing method to sanitize user inputs with regex. Will automatically escape the following characters:
+        - Backslash ()
+        - Grave accent/backtick (`)
+        - Asterisk (*)
+        - Underscore (_)
+        - Left curly brace ({)
+        - Right curly brace (})
+        - Left square bracket ([)
+        - Right square bracket (])
+        - Plus sign (+)
+        - Hash/pound symbol (#)
+        - Hyphen/minus sign (-)
+        - Period/full stop (.)
+        - Exclamation mark (!)
+        - Left parenthesis/round bracket (()
+        - Right parenthesis/round bracket ())
+        - Vertical bar/pipe (|)
+        - Dollar sign ($)
+        - Ampersand (&)
+        - At symbol (@)
+        - Percent sign (%)
+        - Less than symbol (<)
+        - Greater than symbol (>)
+        - Forward slash (/)
+        - Question mark (?)
+
+        Args:
+            input_string (str): User prompt.
+
+        Returns:
+            str: Sanitized user prompt.
+        """
+
         # Define a regular expression that matches punctuation and special characters
         special_chars = re.compile(r"([\\`*_{}\[\]+#\-.!()|\[\]{}$&@%<>/])")
 
