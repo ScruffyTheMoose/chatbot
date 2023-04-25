@@ -46,26 +46,46 @@ class Chatbot:
         # tracking raw version of last input for both StoppingCriteria and cleaning the response from the model
         self.complete_input = ""
 
-    def gen_history(self) -> str:
-        """Generates a complete dialogue history to provide the model with context.
+    def run(self, input: str) -> str:
+        """Runs the model on a prompt given by the user.
+
+        Args:
+            input (str): User input text - Ex: 'What should I do for fun when travelling in Paris?'
 
         Returns:
-            str: _description_
+            str: Generated response from model - Ex: 'Explore the streets of the city. Take in the sights and sounds of the city. If you like, you can even hire a guide to take you to places that you wouldn't normally go to.'
         """
 
+        # build complete input
+        complete_input = self.gen_input(user_input=input)
+        # encode
+        input_ids = self.encode(complete_input=complete_input)
+        # generate
+        output_ids = self.generate(input_ids=input_ids)
+        # decode
+        response = self.decode(output_ids=output_ids)
+
+        return response
+
+    def gen_input(self, user_input: str) -> str:
+        """Builds the complete input to be passed to the model including persona, dialogue history, and the new user input.
+
+        Args:
+            user_input (str): String of text containing the user input
+
+        Returns:
+            str: Complete input ready to be encoded and passed to the model
+        """
+
+        # declaring string to build history
         history = ""
 
+        # appending formatted dialogue into history
         for q, r in questions, responses:
             # append formatted question
             history += f"User: {q}\n"
             # append formatted response
-            history += f"ChatGPT: {q}\n"
-
-        return history
-
-    def gen_input(self, user_input: str) -> str:
-
-        history = self.gen_history()
+            history += f"ChatGPT: {r}\n"
 
         complete_input = f"ChatGPT's Persona: {persona}\n<START>\n[DIALOGUE HISTORY]\n{history}\nUser: {user_input}\nChatGPT:"
 
@@ -77,7 +97,7 @@ class Chatbot:
         """Uses the selected tokenizer to encode the user input text.
 
         Args:
-            complete_input (str): Combined persona, chat history, and user prompt to be processed by the model.
+            complete_input (str): Combined persona, dialogue history, and user input to be processed by the model.
 
         Returns:
             torch.Tensor: A Tensor object containing the encoded version of the input text.
@@ -138,6 +158,12 @@ class Chatbot:
 
         # returns the completed generated text - excludes "User:" stopping keyword and the initial complete input text
         return generated_text[:-5].replace(self.complete_input, "")
+
+
+# class for preprocessing input text from users
+class Preprocess:
+    def __init__(self) -> None:
+        pass
 
     def sanitize_input(input_string: str) -> str:
         """Preprocessing method to sanitize user inputs with regex. Will automatically escape the following characters:
