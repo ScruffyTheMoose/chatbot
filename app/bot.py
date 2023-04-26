@@ -21,7 +21,7 @@ chatbot = Chatbot(
     persona=character["persona"],  # persona from our selected character
     questions=character["questions"],  # questions list from our selected character
     responses=character["responses"],  # responses list from our selected character
-    max_sequences=30,  # number of sequence pairs (question : response) that it will keep track of. The more memory available (RAM or VRAM), the more you can track.
+    max_sequences=30,  # number of sequence pairs (question : response) that it will keep track of. This includes what is imported from the characters module. The more memory available (RAM or VRAM depending on device), the more you can track.
 )
 
 
