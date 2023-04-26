@@ -2,9 +2,8 @@ from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
     StoppingCriteria,
-    StoppingCriteriaList,
 )
-import torch, re
+import torch, re, time
 
 
 class Chatbot:
@@ -54,6 +53,8 @@ class Chatbot:
             str: Generated response from model - Ex: 'Explore the streets of the city. Take in the sights and sounds of the city. If you like, you can even hire a guide to take you to places that you wouldn't normally go to.'
         """
 
+        t0 = time.time()
+
         # build complete input
         complete_input = self.gen_input(user_input=input)
         # encode
@@ -65,6 +66,10 @@ class Chatbot:
 
         self.character.append_questions(input)
         self.character.append_responses(response)
+
+        # compute timing
+        t1 = time.time()
+        print(f"Compute time: {t1 - t0}")
 
         return response
 
@@ -131,9 +136,9 @@ class Chatbot:
         # generate encoded output with the model
         output_ids = self.model.generate(
             input_ids=input_ids,
-            max_length=1000,
+            max_length=5000,
             do_sample=True,
-            temperature=0.6,
+            temperature=0.7,
             top_p=0.85,
             top_k=40,
             num_return_sequences=1,
@@ -195,6 +200,7 @@ class Character:
         self.questions = questions
         self.responses = responses
         self.max_seq = max_sequences
+        self.init_len = len(questions)
 
     def get_name(self) -> str:
         return self.name
@@ -205,20 +211,30 @@ class Character:
     def get_questions(self) -> list:
         return self.questions
 
-    def append_questions(self, new_input) -> None:
-        self.questions.append(new_input)
+    def append_questions(self, new_input: str) -> None:
+        split_input = new_input.split(" ")
+        trunc_input = " ".join(
+            split_input[:20]
+        )  # truncating stored inputs to preserve memory and maintain similar sized tensors between input and output
+
+        self.questions.append(trunc_input)
 
         if len(self.questions) > self.max_seq:
-            self.questions.pop(0)
+            self.questions.pop(self.init_len)
 
     def get_responses(self) -> list:
         return self.responses
 
     def append_responses(self, new_output) -> None:
-        self.responses.append(new_output)
+        split_output = new_output.split(" ")
+        trunc_output = " ".join(
+            split_output[:20]
+        )  # truncating stored outputs for reason mentioned above
+
+        self.responses.append(trunc_output)
 
         if len(self.responses) > self.max_seq:
-            self.responses.pop(0)
+            self.responses.pop(self.init_len)
 
 
 # class for preprocessing input text from users
