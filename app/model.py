@@ -10,7 +10,6 @@ questions = [
     "Can you tell me a joke?",
     "What is the meaning of life?",
     "What is machine learning?",
-    "Can you write a short story for me?",
 ]
 
 # model responses to be preceded with 'ChatGPT:'
@@ -19,16 +18,19 @@ responses = [
     "Sure! Why did the tomato turn red? Because it saw the salad dressing!",
     "The meaning of life is a philosophical question that has been debated for centuries. Some people believe that it is to find happiness and fulfillment, while others believe it is to achieve a certain purpose or goal. Ultimately, the meaning of life is subjective and can be different for each individual.",
     'Machine learning is a field of computer science that uses statistical techniques to give computer systems the ability to "learn" (i.e. progressively improve performance on a specific task) with data, without being explicitly programmed.',
-    "Of course! Once upon a time, there was a kind and adventurous cat named Whiskers. Whiskers loved to explore the world around them, from the tallest trees to the deepest caves. One day, while on a journey, they met a group of animals in need. Whiskers used their bravery and cunning to help the animals and became known as the hero of the forest. From that day forward, Whiskers continued to have many exciting adventures and help those in need. The end.",
 ]
 
 
 class Chatbot:
     def __init__(
         self,
-        tokenizer: str = "PygmalionAI/pygmalion-350m",
-        checkpoint: str = "PygmalionAI/pygmalion-350m",
-        device: str = "cpu",
+        tokenizer: str = "PygmalionAI/pygmalion-1.3b",
+        checkpoint: str = "PygmalionAI/pygmalion-1.3b",
+        device: str = "cuda",
+        persona: str = "",
+        questions: list = [],
+        responses: list = [],
+        max_sequences: int = 5,
     ) -> None:
         """Constructor
 
@@ -45,6 +47,14 @@ class Chatbot:
 
         # tracking raw version of last input for both StoppingCriteria and cleaning the response from the model
         self.complete_input = ""
+
+        # implementing character class
+        self.character = Character(
+            persona=persona,
+            questions=questions,
+            responses=responses,
+            max_sequences=max_sequences,
+        )
 
     def run(self, input: str) -> str:
         """Runs the model on a prompt given by the user.
@@ -65,6 +75,9 @@ class Chatbot:
         # decode
         response = self.decode(output_ids=output_ids)
 
+        self.character.append_questions(input)
+        self.character.append_responses(response)
+
         return response
 
     def gen_input(self, user_input: str) -> str:
@@ -83,7 +96,7 @@ class Chatbot:
         # appending formatted dialogue into history
         for q, r in zip(questions, responses):
             # append formatted question
-            history += f"User: {q}\n"
+            history += f"You: {q}\n"
             # append formatted response
             history += f"ChatGPT: {r}\n"
 
@@ -132,12 +145,12 @@ class Chatbot:
             input_ids=input_ids,
             max_length=1000,
             do_sample=True,
-            temperature=0.6,
-            top_p=0.90,
+            temperature=0.7,
+            top_p=0.9,
             top_k=40,
             num_return_sequences=1,
             stopping_criteria=GenStoppingCriteria(
-                target_sequence="User:",
+                target_sequence="You:",
                 complete_input=self.complete_input,
                 tokenizer=self.tokenizer,
             ),
@@ -162,6 +175,54 @@ class Chatbot:
 
         # returns the completed generated text - excludes "User:" stopping keyword and the initial complete input text
         return generated_text[:-5].replace(self.complete_input, "")
+
+
+# class for managing character information
+class Character:
+    def __init__(
+        self,
+        persona: str = "",
+        questions: list = [],
+        responses: list = [],
+        max_sequences: int = 5,
+    ) -> None:
+        """Constructor for character class.
+
+        Args:
+            persona (str, optional): A string containing any features or traits you want your character to embody. Defaults to "".
+            questions (list, optional): _description_. Defaults to [].
+            responses (list, optional): _description_. Defaults to [].
+            max_sequences (int, optional): _description_. Defaults to 5.
+        """
+
+        if len(questions) != len(responses):
+            raise ValueError("The number of questions and responses must be equal!")
+
+        self.persona = persona
+        self.questions = questions
+        self.responses = responses
+        self.max_seq = max_sequences
+
+    def get_persona(self) -> str:
+        return self.persona
+
+    def get_questions(self) -> list:
+        return self.questions
+
+    def append_questions(self, new_input) -> None:
+        self.questions.append(new_input)
+
+        if len(self.questions) > self.max_seq:
+            self.questions.pop(0)
+
+    def get_responses(self) -> list:
+        return self.responses
+
+    def append_responses(self, new_output) -> None:
+        self.responses.append(new_output)
+
+        if len(self.responses) > self.max_seq:
+            self.responses.pop(0)
 
 
 # class for preprocessing input text from users
