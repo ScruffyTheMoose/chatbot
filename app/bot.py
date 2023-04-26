@@ -11,9 +11,13 @@ intents.presences = False
 
 client = discord.Client(intents=intents)
 chatbot = Chatbot(
+    tokenizer="PygmalionAI/pygmalion-350m",
+    checkpoint="PygmalionAI/pygmalion-350m",
+    device="cpu",
     persona=character["persona"],
     questions=character["questions"],
     responses=character["responses"],
+    max_sequences=20,
 )
 
 
@@ -47,6 +51,7 @@ async def on_message(message):
 
 
 # I pushed an old key alright don't judge me
+# now i gotta do this thing with the thingy
 key = open("key.pw", "r").read()
 
 if __name__ == "__main__":
