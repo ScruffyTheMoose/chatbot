@@ -11,9 +11,9 @@ intents.presences = False
 
 client = discord.Client(intents=intents)
 chatbot = Chatbot(
-    persona=character.persona,
-    questions=character.questions,
-    responses=character.responses,
+    persona=character["persona"],
+    questions=character["questions"],
+    responses=character["responses"],
 )
 
 
