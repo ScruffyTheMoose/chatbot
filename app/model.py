@@ -1,4 +1,9 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM, StoppingCriteria
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    StoppingCriteria,
+    StoppingCriteriaList,
+)
 import torch, re
 
 
@@ -8,6 +13,7 @@ class Chatbot:
         tokenizer: str = "PygmalionAI/pygmalion-1.3b",
         checkpoint: str = "PygmalionAI/pygmalion-1.3b",
         device: str = "cuda",
+        name: str = "",
         persona: str = "",
         questions: list = [],
         responses: list = [],
@@ -31,6 +37,7 @@ class Chatbot:
 
         # implementing character class
         self.character = Character(
+            name=name,
             persona=persona,
             questions=questions,
             responses=responses,
@@ -79,9 +86,9 @@ class Chatbot:
             # append formatted question
             history += f"You: {q}\n"
             # append formatted response
-            history += f"ChatGPT: {r}\n"
+            history += f"{self.character.get_name()}: {r}\n"
 
-        complete_input = f"ChatGPT's Persona: {self.character.get_persona()}\n<START>\n[DIALOGUE HISTORY]\n{history}\nUser: {user_input}\nChatGPT:"
+        complete_input = f"{self.character.get_name()}'s Persona: {self.character.get_persona()}\n<START>\n[DIALOGUE HISTORY]\n{history}\nUser: {user_input}\n{self.character.get_name()}:"
 
         self.complete_input = complete_input
 
@@ -131,7 +138,10 @@ class Chatbot:
             top_k=40,
             num_return_sequences=1,
             stopping_criteria=GenStoppingCriteria(
-                target_sequence="You:",
+                target_sequences=[
+                    "You:",
+                    "User:",
+                ],  # keywords that are looked for to stop the model from generating - if unchecked, model will produce its own dialogue stream by talking to itself
                 complete_input=self.complete_input,
                 tokenizer=self.tokenizer,
             ),
@@ -162,6 +172,7 @@ class Chatbot:
 class Character:
     def __init__(
         self,
+        name: str = "",
         persona: str = "",
         questions: list = [],
         responses: list = [],
@@ -179,10 +190,14 @@ class Character:
         if len(questions) != len(responses):
             raise ValueError("The number of questions and responses must be equal!")
 
+        self.name = name
         self.persona = persona
         self.questions = questions
         self.responses = responses
         self.max_seq = max_sequences
+
+    def get_name(self) -> str:
+        return self.name
 
     def get_persona(self) -> str:
         return self.persona
@@ -256,12 +271,18 @@ class Preprocess:
 
 # class for managing model generation stopping criteria - will stop once the model returns control back to the user via "User:" keyword
 class GenStoppingCriteria(StoppingCriteria):
-    def __init__(self, target_sequence, complete_input, tokenizer):
-        self.target_sequence = target_sequence
+    def __init__(
+        self, target_sequences: list[str], complete_input: str, tokenizer: AutoTokenizer
+    ) -> None:
+        self.target_sequences = target_sequences
         self.complete_input = complete_input
         self.tokenizer = tokenizer
 
-    def __call__(self, input_ids, scores, **kwargs):
+    # Currently, we decode the generated response each iteration to check for our stopping keywords
+    # Alternatively, we could parse the encoded complete input out of the encoded generated response each iteration and then check for keyword tokens
+    # The alt option would likely be faster (no encoding/decoding), but compute times are acceptable atm and I doubt we'll see significant improvement
+    def __call__(self, input_ids, scores, **kwargs) -> None:
+
         # Get the generated text as a string
         generated_text = self.tokenizer.decode(input_ids[0])
 
@@ -269,8 +290,9 @@ class GenStoppingCriteria(StoppingCriteria):
         generated_text = generated_text.replace(self.complete_input, "")
 
         # Check if the target sequence appears in the generated text
-        if self.target_sequence in generated_text:
-            return True  # Stop generation
+        for target in self.target_sequences:
+            if target in generated_text:
+                return True  # Stop generation
 
         return False  # Continue generation
 
