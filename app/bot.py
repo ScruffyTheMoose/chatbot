@@ -1,12 +1,20 @@
 import discord, random
 from model import Chatbot, Preprocess
+from characters import ChatGPT
+
+# loading in ChatGPT details from characters module
+character = ChatGPT()
 
 intents = discord.Intents.all()
 intents.members = False
 intents.presences = False
 
 client = discord.Client(intents=intents)
-chatbot = Chatbot()
+chatbot = Chatbot(
+    persona=character.persona,
+    questions=character.questions,
+    responses=character.responses,
+)
 
 
 @client.event
