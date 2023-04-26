@@ -133,8 +133,8 @@ class Chatbot:
             input_ids=input_ids,
             max_length=1000,
             do_sample=True,
-            temperature=0.7,
-            top_p=0.9,
+            temperature=0.6,
+            top_p=0.85,
             top_k=40,
             num_return_sequences=1,
             stopping_criteria=GenStoppingCriteria(
