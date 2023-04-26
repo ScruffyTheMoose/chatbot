@@ -1,9 +1,9 @@
-import discord, random
+import discord, torch
 from model import Chatbot, Preprocess
-from characters import ChatGPT
+import characters
 
 # loading in ChatGPT details from characters module
-character = ChatGPT()
+character = characters.Barack_Obama()
 
 # opening all intents except for privilaged
 intents = discord.Intents.all()
@@ -15,14 +15,14 @@ client = discord.Client(intents=intents)
 
 # instantiating chatbot
 chatbot = Chatbot(
-    tokenizer="PygmalionAI/pygmalion-350m",  # using the smallest PygmalionAI model for best CPU performance
-    checkpoint="PygmalionAI/pygmalion-350m",
-    device="cpu",  # selecting which device the model is computed on - can use code <"cuda" if torch.cuda.is_available() else "cpu"> or can explicitly select a device
+    tokenizer="PygmalionAI/pygmalion-1.3b",
+    checkpoint="PygmalionAI/pygmalion-1.3b",
+    device="cuda",  # selecting which device the model is computed on - can use code <"cuda" if torch.cuda.is_available() else "cpu"> or can explicitly select a device
     name=character["name"],
     persona=character["persona"],  # persona from our selected character
     questions=character["questions"],  # questions list from our selected character
     responses=character["responses"],  # responses list from our selected character
-    max_sequences=30,  # number of sequence pairs (question : response) that it will keep track of. This includes what is imported from the characters module. The more memory available (RAM or VRAM depending on device), the more you can track.
+    max_sequences=10,  # number of sequence pairs (question : response) that it will keep track of. This includes what is imported from the characters module. The more memory available (RAM or VRAM depending on device), the more you can track.
 )
 
 
@@ -39,11 +39,11 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    # chatbot responds only to messages beginning with key '~!'
-    if message.content.startswith("~!"):
+    # chatbot responds only to messages beginning with key '!'
+    if message.content.startswith("!"):
 
         # remove '~!' from start of message and sanitizes contents
-        user_message = Preprocess.sanitize_input(message.content[2:])
+        user_message = Preprocess.sanitize_input(message.content[1:])
 
         # confirming input recieved correctly
         print(f"User: {user_message}")
