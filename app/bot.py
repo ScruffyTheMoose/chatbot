@@ -18,6 +18,7 @@ chatbot = Chatbot(
     tokenizer="PygmalionAI/pygmalion-350m",  # using the smallest PygmalionAI model for best CPU performance
     checkpoint="PygmalionAI/pygmalion-350m",
     device="cpu",  # selecting which device the model is computed on - can use code <"cuda" if torch.cuda.is_available() else "cpu"> or can explicitly select a device
+    name=character["name"],
     persona=character["persona"],  # persona from our selected character
     questions=character["questions"],  # questions list from our selected character
     responses=character["responses"],  # responses list from our selected character
