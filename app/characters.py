@@ -9,6 +9,27 @@
 # Keep in mind memory limitations of your device and token limitations of smaller models.
 
 
+# def template() -> dict:
+#     character = {
+#         "name": "",
+#         "persona": "",
+#         "questions": [
+#             "",
+#             "",
+#             "",
+#             "",
+#         ],
+#         "responses": [
+#             "",
+#             "",
+#             "",
+#             "",
+#         ],
+#     }
+
+#     return character
+
+
 def ChatGPT() -> dict:
     character = {
         "name": "ChatGPT",
