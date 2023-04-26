@@ -8,6 +8,8 @@
 # The number of questions and responses MUST be equal. A ValueException will be raised if not.
 # Keep in mind memory limitations of your device and token limitations of smaller models.
 
+# If you would like to make a pull request to add your own character to this module, please limit any explicit/NSFW content.
+
 
 # def template() -> dict:
 #     character = {
