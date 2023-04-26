@@ -1,5 +1,8 @@
 from transformers import pipeline, Conversation
 
+### THIS MODULE IS DEPRECATED ###
+### PLEASE REFER TO model.py ###
+
 
 class Chatbot:
     def __init__(
